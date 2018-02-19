@@ -49,7 +49,7 @@ ggplot(ave_ict, aes(x = COUNTRY, y = ave_value)) +
   geom_bar(stat = "identity", position = "dodge", fill = "light blue")
 
 
-<<<<<<< HEAD
+
 # "PMR - Ease of entrepreneurship index" ----------------------------------
 pmr <- dt[which(dt$Indicator == "PMR - Ease of entrepreneurship index"), -2]
 ave_pmr <- sqldf("select avg(Value) as ave_value, COUNTRY from pmr group by COUNTRY")
@@ -57,8 +57,5 @@ ave_pmr$COUNTRY <- factor(ave_pmr$COUNTRY, levels = ave_pmr[order(ave_pmr$ave_va
 ggplot(ave_pmr, aes(x = COUNTRY, y = ave_value)) +
   geom_bar(stat = "identity", position = "dodge", fill = "light blue")
 
-
-=======
->>>>>>> 794aa65464905e445fa75977df20c5ab7a143b5b
 
 
