@@ -1,6 +1,7 @@
 library(dplyr)
 library(ggplot2)
 library(sqldf)
+library(ca)
 # Preprocessing the raw data ----------------------------------------------
 dt <- read.csv("STIO_2016.csv", header = T, sep = ",")
 #remove Thailand
@@ -43,19 +44,35 @@ ict <- dt[which(dt$Indicator == "ICT investments, total, % of GDP" ), -2]
 #average, group by country
 ave_ict <- sqldf("select avg(Value) as ave_value, COUNTRY from ict group by COUNTRY")
 ave_ict$COUNTRY <- factor(ave_ict$COUNTRY, levels = ave_ict[order(ave_ict$ave_value),]$COUNTRY)
-
+y <- quantile(ave_ict$ave_value, c(0.6, 0.3))
+ave_ict$ictscore[ave_ict$ave_value >= y[1]] <- "High"
+ave_ict$ictscore[ave_ict$ave_value < y[1] & ave_ict$ave_value >= y[2]] <- "Median"
+ave_ict$ictscore[ave_ict$ave_value < y[2]] <- "Low"
+View(ave_ict)
 
 ggplot(ave_ict, aes(x = COUNTRY, y = ave_value)) +
   geom_bar(stat = "identity", position = "dodge", fill = "light blue")
-
 
 
 # "PMR - Ease of entrepreneurship index" ----------------------------------
 pmr <- dt[which(dt$Indicator == "PMR - Ease of entrepreneurship index"), -2]
 ave_pmr <- sqldf("select avg(Value) as ave_value, COUNTRY from pmr group by COUNTRY")
 ave_pmr$COUNTRY <- factor(ave_pmr$COUNTRY, levels = ave_pmr[order(ave_pmr$ave_value),]$COUNTRY)
+
+y <- quantile(ave_pmr$ave_value, c(0.6, 0.3))
+ave_pmr$pmrscore[ave_pmr$ave_value >= y[1]] <- "High"
+ave_pmr$pmrscore[ave_pmr$ave_value < y[1] & ave_pmr$ave_value >= y[2]] <- "Median"
+ave_pmr$pmrscore[ave_pmr$ave_value < y[2]] <- "Low"
+View(ave_pmr)
+
 ggplot(ave_pmr, aes(x = COUNTRY, y = ave_value)) +
   geom_bar(stat = "identity", position = "dodge", fill = "light blue")
 
 
+# correlation between pmr and ict -----------------------------------------
+pmr_ict <- merge(ave_ict, ave_pmr, by = "COUNTRY")
+pmr_ict <- pmr_ict[,c("COUNTRY","ictscore", "pmrscore")]
+pi_tab <- xtabs(~ictscore + pmrscore, pmr_ict) 
+pi.ca <- ca(pi_tab)
+plot(pi.ca, arrows=c(T, T))
 
