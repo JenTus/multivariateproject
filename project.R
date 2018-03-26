@@ -9,7 +9,7 @@ dt <- dt[-which(dt$COUNTRY == "THA"),]
 #remove data with flags
 #with B: break; D: difference in methodology; E: Estimated value; P: provisonal value, M&L, missing values
 dt <- dt[-which(dt$Flag.Codes != ""),]
-#remove the flags
+#remove the flaggs
 dt <- dt[, -c(3,5,8,9)]
 #remove number and headcount
 remove <- c("number", "headcount", "million")
