@@ -45,9 +45,9 @@ ict <- dt[which(dt$Indicator == "ICT investments, total, % of GDP" ), -2]
 ave_ict <- sqldf("select avg(Value) as ave_value, COUNTRY from ict group by COUNTRY")
 ave_ict$COUNTRY <- factor(ave_ict$COUNTRY, levels = ave_ict[order(ave_ict$ave_value),]$COUNTRY)
 y <- quantile(ave_ict$ave_value, c(0.6, 0.3))
-ave_ict$ictscore[ave_ict$ave_value >= y[1]] <- "High"
-ave_ict$ictscore[ave_ict$ave_value < y[1] & ave_ict$ave_value >= y[2]] <- "Median"
-ave_ict$ictscore[ave_ict$ave_value < y[2]] <- "Low"
+ave_ict$ictscore[ave_ict$ave_value >= y[1]] <- "High_ict"
+ave_ict$ictscore[ave_ict$ave_value < y[1] & ave_ict$ave_value >= y[2]] <- "Median_ict"
+ave_ict$ictscore[ave_ict$ave_value < y[2]] <- "Low_ict"
 View(ave_ict)
 
 ggplot(ave_ict, aes(x = COUNTRY, y = ave_value)) +
@@ -60,9 +60,9 @@ ave_pmr <- sqldf("select avg(Value) as ave_value, COUNTRY from pmr group by COUN
 ave_pmr$COUNTRY <- factor(ave_pmr$COUNTRY, levels = ave_pmr[order(ave_pmr$ave_value),]$COUNTRY)
 
 y <- quantile(ave_pmr$ave_value, c(0.6, 0.3))
-ave_pmr$pmrscore[ave_pmr$ave_value >= y[1]] <- "High"
-ave_pmr$pmrscore[ave_pmr$ave_value < y[1] & ave_pmr$ave_value >= y[2]] <- "Median"
-ave_pmr$pmrscore[ave_pmr$ave_value < y[2]] <- "Low"
+ave_pmr$pmrscore[ave_pmr$ave_value >= y[1]] <- "High_pmr"
+ave_pmr$pmrscore[ave_pmr$ave_value < y[1] & ave_pmr$ave_value >= y[2]] <- "Median_pmr"
+ave_pmr$pmrscore[ave_pmr$ave_value < y[2]] <- "Low_pmr"
 View(ave_pmr)
 
 ggplot(ave_pmr, aes(x = COUNTRY, y = ave_value)) +
@@ -74,5 +74,5 @@ pmr_ict <- merge(ave_ict, ave_pmr, by = "COUNTRY")
 pmr_ict <- pmr_ict[,c("COUNTRY","ictscore", "pmrscore")]
 pi_tab <- xtabs(~ictscore + pmrscore, pmr_ict) 
 pi.ca <- ca(pi_tab)
-plot(pi.ca, arrows=c(T, T))
+plot(pi.ca, arrows=c(T, T), labels = c("ict", "pmr"))
 
