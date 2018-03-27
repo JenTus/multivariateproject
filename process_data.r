@@ -1,7 +1,11 @@
 library(dplyr)
-library(ggplot2)
+library("ggplot2")
 library(sqldf)
 library(ca)
+library(reshape)
+library("gridExtra")
+library(GGally)
+library("ca")
 # Preprocessing the raw data ----------------------------------------------
 dt <- read.csv("STIO_2016.csv", header = T, sep = ",")
 #remove Thailand
@@ -28,16 +32,130 @@ temp = dt$Indicator == indicators[1]
 for(i in 2:length(indicators)){
   temp = temp | (dt$Indicator == indicators[i])
 }
-row_data <- dt[which(temp), -2]
+raw_data <- dt[which(temp),]
+# View(row_data)
+raw_cast <- cast(raw_data, Country + COUNTRY~Indicator, mean)
+# View(raw_cast)
+
+themean <- function(x){
+  m <- mean(x, na.rm = T)
+}
+
+applied_research <- apply(raw_cast[, c(3, 4, 5)], 1, themean)
+
+dd <- cbind(raw_cast[, c(1, 2)], applied_research, raw_cast[, -c(1, 2, 3, 4, 5)])
+
+# View(dd)
+
+complete_data <- cbind(dd[complete.cases(dd), c(1, 2)], round(dd[complete.cases(dd), -c(1, 2)], 2))
+row.names(complete_data) <- c(1:length(complete_data[,1]))
+View(complete_data)
 
 
-# View R&D personnel, per thousand total employment -----------------------
-personnel <- dt[which(dt$Indicator == "R&D personnel, per thousand total employment" ), -2]
-#average, group by country
-ave_personnel <- sqldf("select avg(Value) as ave_value, COUNTRY from personnel group by COUNTRY")
-ave_personnel$COUNTRY <- factor(ave_personnel$COUNTRY, levels = ave_personnel[order(ave_personnel$ave_value),]$COUNTRY)
+# explore the dataset univariate----------------------------------------------------
+p1 <- ggplot(complete_data, aes(x = reorder(COUNTRY, applied_research), y = applied_research)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "light blue")+
+  xlab("country")
+
+p2 <- ggplot(complete_data, aes(x = reorder(COUNTRY, `GERD, % of GDP`), y = `GERD, % of GDP`)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "light blue")+
+  xlab("country") +
+  ylab("GERD")
+
+p3 <- ggplot(complete_data, aes(x = reorder(COUNTRY, `ICT investments, total, % of GDP`), y = `ICT investments, total, % of GDP`)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "light blue")+
+  xlab("country") +
+  ylab("ICT")
+
+p4 <- ggplot(complete_data, aes(x = reorder(COUNTRY, `R&D personnel, per thousand total employment`), y = `R&D personnel, per thousand total employment`)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "light blue") +
+  xlab("country") +
+  ylab("R&D")
+
+p5 <- ggplot(complete_data, aes(x = reorder(COUNTRY, `Women researchers, % of total researchers`), y = `Women researchers, % of total researchers`)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "light blue") +
+  xlab("country") +
+  ylab("woman")
+
+grid.arrange(p1, p2, p3, p4, p5, ncol=1)
+
+# change into quality values ----------------------------------------------
+
+change_quantity <- function(coldata){
+  y <- quantile(coldata, c(0.8, 0.6, 0.4, 0.2))
+  c1 <- coldata >= y[1]
+  c2 <- (coldata >= y[2] & coldata <= y[1])
+  c3 <- (coldata >= y[3] & coldata <= y[2])
+  c4 <- (coldata >= y[4] & coldata <= y[3])
+  c5 <- coldata <= y[4]
+  return(list(c1, c2, c3, c4, c5))
+}
+
+form_quantity_df <- function(df, name, aa){
+  for(i in 1:5){
+    df[aa[name][[1]][[i]], name] <- as.character(i)
+  }
+  return(df)
+}
+
+ll <- change_quantity(complete_data[,3])
+aa <-apply(complete_data[, -c(1, 2)], 2, change_quantity)
+quantitydf <- data.frame(COUNTRY = complete_data$COUNTRY)
+
+for(i in 1 : 5){
+  quantitydf <- form_quantity_df(quantitydf, names(aa)[i], aa)
+}
+
+rownames(quantitydf) <- quantitydf$COUNTRY
+colnames(quantitydf) <- c("country", "applied research", "GERD", "ICT", "R&D", "women")
+quality <- quantitydf[,-1]
+# View(quality)
 
 
-# Applied research expenditure, % of gdp ----------------------------------
-applied_government <- dt[which(dt$Indicator == "Applied research expenditures, government, % of GDP"),]
+# bivariate correspondence analysis
+indicators = c("applied research", "GERD", "ICT", "R&D")
+par(mfrow=c(2,2))
+for(i in 1 : length(indicators)){
+  tbb <- quality[, which(names(quality) == "women" | names(quality) == indicators[i])]
+  tmp <- table(tbb)
+  tmp.ca <- ca(tmp)
+  plot(tmp.ca, arrows = c(T, T), what = c("all", "all"))
+  legend("topleft", names(tbb), fill = c("blue", "red"), horiz=F, cex=0.5)
+}
+
+
+# multivariate correspondence analysis ------------------------------------
+quality.mca <- mjca(quality, lambda = "indicator")
+summary(quality.mca)
+
+tb_mca_df = data.frame(quality.mca$colcoord, Variable = rep(names(quality.mca$levels.n), quality.mca$levels.n))
+rownames(tb_mca_df) = quality.mca$levelnames
+
+country_point_df = data.frame(quality.mca$rowcoord, country = quantitydf$country)
+# plot
+xx = round(quality.mca$sv[1]^2/sum(quality.mca$sv^2)*100, 2)
+yy = round(quality.mca$sv[2]^2/sum(quality.mca$sv^2)*100, 2)
+p <- ggplot() +
+  geom_hline(yintercept = 0, colour = "gray70") +
+  geom_vline(xintercept = 0, colour = "gray70") +
+  geom_text(data = tb_mca_df, aes(x = X1, y = X2, colour = Variable, label = rownames(tb_mca_df))) + 
+  geom_segment(data = tb_mca_df, aes(x=0, y=0, xend=X1, yend=X2, colour = Variable), arrow=arrow(length=unit(0.2,"cm")), size=0.3) +
+  geom_text(data = country_point_df, aes(x = X1, y = X2, label = country)) + 
+  labs(x = paste("pca1 = ", xx,"%",sep=""), y = paste("pca2 = ", yy,"%",sep="")) 
+p + ggplot2:: theme(legend.position = "bottom")
+
+
+
+
+
+p <- ggpairs(data = complete_data, 
+             columns = 3:7,
+             aes(colour = COUNTRY, alpha = 0.4, legend = COUNTRY),
+             upper = list(continuous = wrap('points', alpha = 0.6), combo = "blank"),
+             lower = list(continuous = 'blank', combo = "blank"),
+             diag = list(continuous = 'blankDiag'),
+             legend = c(3))
+p + ggplot2::theme(legend.title = ggplot2::element_text(face = "italic"))
+
+pairs(complete_data[,-c(1, 2)])
 
