@@ -112,7 +112,7 @@ quality <- quantitydf[,-1]
 # View(quality)
 
 
-# bivariate correspondence analysis
+# bivariate correspondence analysis,
 indicators = c("applied research", "GERD", "ICT", "R&D")
 par(mfrow=c(2,2))
 for(i in 1 : length(indicators)){
