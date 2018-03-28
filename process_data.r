@@ -6,6 +6,7 @@ library(reshape)
 library("gridExtra")
 library(GGally)
 library("ca")
+library(cluster)
 # Preprocessing the raw data ----------------------------------------------
 dt <- read.csv("STIO_2016.csv", header = T, sep = ",")
 #remove Thailand
@@ -147,15 +148,27 @@ p + ggplot2:: theme(legend.position = "bottom")
 
 
 
+# k-means clustering ------------------------------------------------------
 
-p <- ggpairs(data = complete_data, 
-             columns = 3:7,
-             aes(colour = COUNTRY, alpha = 0.4, legend = COUNTRY),
-             upper = list(continuous = wrap('points', alpha = 0.6), combo = "blank"),
-             lower = list(continuous = 'blank', combo = "blank"),
-             diag = list(continuous = 'blankDiag'),
-             legend = c(3))
-p + ggplot2::theme(legend.title = ggplot2::element_text(face = "italic"))
+# View(complete_data)
+scale_data <- scale(complete_data[, -c(1, 2)])
+rownames(scale_data) <- complete_data$Country
+data.pca <- princomp(scale_data)
+pca_frame <- data.frame(data.pca$scores)
+set.seed(200)
+k.mean <- kmeans(pca_frame[, c(1, 2, 3, 4, 5)], 5)
+summary(k.mean)
 
-pairs(complete_data[,-c(1, 2)])
+# k-means visualize
+
+p1<- ggplot(pca_frame, aes(x = Comp.1, y = Comp.2)) + 
+  geom_text(aes(label=rownames(pca_frame), colour = factor(k.mean$cluster)), show.legend = T) +
+  theme(legend.position = "bottom") + labs(color='Centroid Cluster Result') 
+
+p1
+
+
+# hierarchical clustering -------------------------------------------------
+
+
 
