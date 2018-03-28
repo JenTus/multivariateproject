@@ -169,6 +169,15 @@ p1
 
 
 # hierarchical clustering -------------------------------------------------
-
-
+data.dist <- dist(scale_data, method = "euclidean")
+#single
+data.min <-hclust(data.dist, method = "single")
+plot(data.min, main="Single")
+#average
+data.ave <-hclust(data.dist, method = "average")
+plot(data.ave, main="Average")
+#max
+data.max <-hclust(data.dist, method = "complete")
+plot(data.max, main="Complete")
+dev.off()
 
