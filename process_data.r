@@ -3,7 +3,7 @@ library(ggplot2)
 library(sqldf)
 library(ca)
 # Preprocessing the raw data ----------------------------------------------
-dt <- read.csv("STIO_2016.csv", header = T, sep = ",")
+dt <- read.csv("STIO_2016.csv", header = T, fileEncoding="UTF-8-BOM")
 #remove Thailand
 dt <- dt[-which(dt$COUNTRY == "THA" | dt$COUNTRY == "EU28"),]
 #remove data with flags
@@ -29,6 +29,7 @@ for(i in 2:length(indicators)){
   temp = temp | (dt$Indicator == indicators[i])
 }
 row_data <- dt[which(temp), -2]
+
 
 
 # View R&D personnel, per thousand total employment -----------------------
